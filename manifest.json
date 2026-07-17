@@ -1,0 +1,17 @@
+{
+  "short_name": "XO Arena",
+  "name": "XO Arena - Ultimate Tic-Tac-Toe",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "./",
+  "background_color": "#060614",
+  "theme_color": "#060614",
+  "display": "standalone",
+  "orientation": "portrait"
+}
