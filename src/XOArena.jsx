@@ -84,17 +84,161 @@ function getBestMove(board, aiSymbol, humanSymbol, difficulty) {
 
 const DIFFICULTY_LABELS = { easy: "Easy 😊", medium: "Medium 🤔", hard: "Hard 🤖" };
 
+const THEMES = {
+  neon: {
+    name: "Neon Aura 🌌",
+    bg: "radial-gradient(ellipse at 20% 20%, #1a0533 0%, #060614 50%, #001233 100%)",
+    colorX: "#00d4ff",
+    colorO: "#ff006e",
+    colorXBg: "rgba(0, 212, 255, 0.08)",
+    colorOBg: "rgba(255, 0, 110, 0.08)",
+    colorXBorder: "rgba(0, 212, 255, 0.25)",
+    colorOBorder: "rgba(255, 0, 110, 0.25)",
+    gradientTitle: "linear-gradient(135deg, #00d4ff 0%, #bf00ff 50%, #ff006e 100%)",
+    shadowX: "rgba(0, 212, 255, 0.4)",
+    shadowO: "rgba(255, 0, 110, 0.4)",
+    starColor: "#ffffff",
+  },
+  cyberpunk: {
+    name: "Cyberpunk ⚡",
+    bg: "radial-gradient(ellipse at 20% 20%, #292203 0%, #080701 60%, #17001c 100%)",
+    colorX: "#fcee0a",
+    colorO: "#00f0ff",
+    colorXBg: "rgba(252, 238, 10, 0.08)",
+    colorOBg: "rgba(0, 240, 255, 0.08)",
+    colorXBorder: "rgba(252, 238, 10, 0.25)",
+    colorOBorder: "rgba(0, 240, 255, 0.25)",
+    gradientTitle: "linear-gradient(135deg, #fcee0a 0%, #ff0055 100%)",
+    shadowX: "rgba(252, 238, 10, 0.4)",
+    shadowO: "rgba(0, 240, 255, 0.4)",
+    starColor: "#fcee0a",
+  },
+  emerald: {
+    name: "Emerald Matrix 🌲",
+    bg: "radial-gradient(ellipse at 20% 20%, #022013 0%, #010604 60%, #051610 100%)",
+    colorX: "#00ff9d",
+    colorO: "#ffd700",
+    colorXBg: "rgba(0, 255, 157, 0.08)",
+    colorOBg: "rgba(255, 215, 0, 0.08)",
+    colorXBorder: "rgba(0, 255, 157, 0.25)",
+    colorOBorder: "rgba(255, 215, 0, 0.25)",
+    gradientTitle: "linear-gradient(135deg, #00ff9d 0%, #00b3ff 100%)",
+    shadowX: "rgba(0, 255, 157, 0.4)",
+    shadowO: "rgba(255, 215, 0, 0.4)",
+    starColor: "#00ff9d",
+  },
+  sunset: {
+    name: "Sunset Mirage 🌅",
+    bg: "radial-gradient(ellipse at 20% 20%, #260813 0%, #050104 60%, #1c0b02 100%)",
+    colorX: "#ff7b00",
+    colorO: "#ff007b",
+    colorXBg: "rgba(255, 123, 0, 0.08)",
+    colorOBg: "rgba(255, 0, 123, 0.08)",
+    colorXBorder: "rgba(255, 123, 0, 0.25)",
+    colorOBorder: "rgba(255, 0, 123, 0.25)",
+    gradientTitle: "linear-gradient(135deg, #ff7b00 0%, #ff007b 100%)",
+    shadowX: "rgba(255, 123, 0, 0.4)",
+    shadowO: "rgba(255, 0, 123, 0.4)",
+    starColor: "#ff7b00",
+  }
+};
+
+const playSound = (type, enabled) => {
+  if (!enabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === 'click-x') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+      osc.frequency.exponentialRampToValueAtTime(783.99, ctx.currentTime + 0.1); // G5
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } else if (type === 'click-o') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(392.00, ctx.currentTime); // G4
+      osc.frequency.exponentialRampToValueAtTime(587.33, ctx.currentTime + 0.1); // D5
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } else if (type === 'win') {
+      const now = ctx.currentTime;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now); // C5
+      osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+      osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+      osc.frequency.setValueAtTime(1046.50, now + 0.24); // C6
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.linearRampToValueAtTime(0.12, now + 0.3);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    } else if (type === 'draw') {
+      const now = ctx.currentTime;
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(293.66, now); // D4
+      osc.frequency.linearRampToValueAtTime(196.00, now + 0.25); // G3
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.linearRampToValueAtTime(0.001, now + 0.25);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } else if (type === 'reset') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(196.00, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(523.25, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.06, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+    }
+  } catch (e) {
+    console.warn("Audio Context error", e);
+  }
+};
+
 export default function XOArena() {
   const [screen, setScreen] = useState("menu");
   const [mode, setMode] = useState("pvp");
   const [difficulty, setDifficulty] = useState("medium");
-  const [playerNames, setPlayerNames] = useState({ X: "Player X", O: "Player O" });
+
+  // Custom states
+  const [theme, setTheme] = useState(() => localStorage.getItem("xo_theme") || "neon");
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem("xo_sound");
+    return saved !== null ? saved === "true" : true;
+  });
+
+  const [playerNames, setPlayerNames] = useState(() => {
+    const saved = localStorage.getItem("xo_names");
+    return saved ? JSON.parse(saved) : { X: "Player X", O: "Player O" };
+  });
+
   const [board, setBoard] = useState(Array(9).fill(null));
   const [currentTurn, setCurrentTurn] = useState("X");
   const [result, setResult] = useState(null);
-  const [scores, setScores] = useState({ X: 0, O: 0, draw: 0 });
-  const [round, setRound] = useState(1);
-  const [streak, setStreak] = useState({ player: null, count: 0 });
+
+  const [scores, setScores] = useState(() => {
+    const saved = localStorage.getItem("xo_scores");
+    return saved ? JSON.parse(saved) : { X: 0, O: 0, draw: 0 };
+  });
+
+  const [round, setRound] = useState(() => {
+    const saved = localStorage.getItem("xo_round");
+    return saved ? parseInt(saved, 10) : 1;
+  });
+
+  const [streak, setStreak] = useState(() => {
+    const saved = localStorage.getItem("xo_streak");
+    return saved ? JSON.parse(saved) : { player: null, count: 0 };
+  });
+
   const [winningCombo, setWinningCombo] = useState([]);
   const [animCells, setAnimCells] = useState([]);
   const [aiThinking, setAiThinking] = useState(false);
@@ -102,7 +246,33 @@ export default function XOArena() {
   const [drawShake, setDrawShake] = useState(false);
   const [justPlaced, setJustPlaced] = useState(null);
 
+  // Sync state to local storage
+  useEffect(() => {
+    localStorage.setItem("xo_theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem("xo_sound", soundEnabled.toString());
+  }, [soundEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("xo_names", JSON.stringify(playerNames));
+  }, [playerNames]);
+
+  useEffect(() => {
+    localStorage.setItem("xo_scores", JSON.stringify(scores));
+  }, [scores]);
+
+  useEffect(() => {
+    localStorage.setItem("xo_round", round.toString());
+  }, [round]);
+
+  useEffect(() => {
+    localStorage.setItem("xo_streak", JSON.stringify(streak));
+  }, [streak]);
+
   const startGame = () => {
+    playSound('reset', soundEnabled);
     setBoard(Array(9).fill(null));
     setCurrentTurn("X");
     setResult(null);
@@ -119,6 +289,8 @@ export default function XOArena() {
   }, [board, result, aiThinking, currentTurn, mode]);
 
   const playMove = useCallback((idx, symbol) => {
+    playSound(symbol === 'X' ? 'click-x' : 'click-o', soundEnabled);
+
     const newBoard = [...board];
     newBoard[idx] = symbol;
     setBoard(newBoard);
@@ -131,11 +303,13 @@ export default function XOArena() {
         setResult(res);
         setWinningCombo(res.combo || []);
         if (res.winner === "draw") {
+          playSound('draw', soundEnabled);
           setScores(s => ({ ...s, draw: s.draw + 1 }));
           setStreak({ player: null, count: 0 });
           setDrawShake(true);
           setTimeout(() => setDrawShake(false), 600);
         } else {
+          playSound('win', soundEnabled);
           setScores(s => ({ ...s, [res.winner]: s[res.winner] + 1 }));
           setStreak(prev => prev.player === res.winner
             ? { player: res.winner, count: prev.count + 1 }
@@ -146,7 +320,7 @@ export default function XOArena() {
     } else {
       setCurrentTurn(symbol === "X" ? "O" : "X");
     }
-  }, [board]);
+  }, [board, soundEnabled]);
 
   // AI move
   useEffect(() => {
@@ -159,9 +333,10 @@ export default function XOArena() {
       setAiThinking(false);
     }, delay);
     return () => clearTimeout(timer);
-  }, [currentTurn, mode, board, result, screen, difficulty]);
+  }, [currentTurn, mode, board, result, screen, difficulty, playMove]);
 
   const playAgain = () => {
+    playSound('reset', soundEnabled);
     setBoard(Array(9).fill(null));
     setCurrentTurn("X");
     setResult(null);
@@ -172,6 +347,7 @@ export default function XOArena() {
   };
 
   const goMenu = () => {
+    playSound('reset', soundEnabled);
     setScreen("menu");
     setResult(null);
     setBoard(Array(9).fill(null));
@@ -181,6 +357,7 @@ export default function XOArena() {
   };
 
   const resetScores = () => {
+    playSound('reset', soundEnabled);
     setScores({ X: 0, O: 0, draw: 0 });
     setStreak({ player: null, count: 0 });
     setRound(1);
@@ -189,6 +366,7 @@ export default function XOArena() {
 
   const xName = playerNames.X || "Player X";
   const oName = mode === "ai" ? "AI Bot 🤖" : (playerNames.O || "Player O");
+  const activeTheme = THEMES[theme] || THEMES.neon;
 
   return (
     <>
@@ -206,13 +384,28 @@ export default function XOArena() {
 
         .xo-root {
           min-height: 100vh;
-          background: radial-gradient(ellipse at 20% 20%, #1a0533 0%, #060614 50%, #001233 100%);
+          background: var(--theme-bg);
           display: flex;
           align-items: center;
           justify-content: center;
           padding: 16px;
           position: relative;
           overflow: hidden;
+          transition: background 0.8s ease;
+        }
+
+        .xo-root {
+          --theme-bg: ${activeTheme.bg};
+          --color-x: ${activeTheme.colorX};
+          --color-o: ${activeTheme.colorO};
+          --color-x-bg: ${activeTheme.colorXBg};
+          --color-o-bg: ${activeTheme.colorOBg};
+          --color-x-border: ${activeTheme.colorXBorder};
+          --color-o-border: ${activeTheme.colorOBorder};
+          --gradient-title: ${activeTheme.gradientTitle};
+          --shadow-x: ${activeTheme.shadowX};
+          --shadow-o: ${activeTheme.shadowO};
+          --star-color: ${activeTheme.starColor};
         }
 
         .xo-root::before {
@@ -235,10 +428,11 @@ export default function XOArena() {
         .star {
           position: absolute;
           width: 2px; height: 2px;
-          background: #fff;
+          background: var(--star-color);
           border-radius: 50%;
           animation: twinkle var(--d) ease-in-out infinite;
           opacity: 0;
+          transition: background 0.8s ease;
         }
         @keyframes twinkle {
           0%, 100% { opacity: 0; transform: scale(1); }
@@ -259,7 +453,7 @@ export default function XOArena() {
           font-weight: 900;
           font-size: clamp(2.2rem, 8vw, 3.5rem);
           letter-spacing: 0.08em;
-          background: linear-gradient(135deg, #00d4ff 0%, #bf00ff 50%, #ff006e 100%);
+          background: var(--gradient-title);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
@@ -269,7 +463,7 @@ export default function XOArena() {
         }
         @keyframes titlePulse {
           0%, 100% { filter: brightness(1); }
-          50% { filter: brightness(1.3) drop-shadow(0 0 20px rgba(0,212,255,0.5)); }
+          50% { filter: brightness(1.3) drop-shadow(0 0 20px var(--shadow-x)); }
         }
 
         .subtitle {
@@ -304,16 +498,16 @@ export default function XOArena() {
           transform: translateY(-1px);
         }
         .mode-btn.active-pvp {
-          border-color: #00d4ff;
-          background: rgba(0,212,255,0.1);
-          color: #00d4ff;
-          box-shadow: 0 0 20px rgba(0,212,255,0.2);
+          border-color: var(--color-x);
+          background: var(--color-x-bg);
+          color: var(--color-x);
+          box-shadow: 0 0 20px var(--shadow-x);
         }
         .mode-btn.active-ai {
-          border-color: #ff006e;
-          background: rgba(255,0,110,0.1);
-          color: #ff006e;
-          box-shadow: 0 0 20px rgba(255,0,110,0.2);
+          border-color: var(--color-o);
+          background: var(--color-o-bg);
+          color: var(--color-o);
+          box-shadow: 0 0 20px var(--shadow-o);
         }
 
         /* ── DIFFICULTY ── */
@@ -353,7 +547,7 @@ export default function XOArena() {
 
         /* ── START BUTTON ── */
         .start-btn {
-          background: linear-gradient(135deg, #00d4ff, #bf00ff, #ff006e);
+          background: var(--gradient-title);
           border: none;
           border-radius: 16px;
           padding: 16px;
@@ -365,11 +559,11 @@ export default function XOArena() {
           cursor: pointer;
           width: 100%;
           transition: all 0.2s;
-          box-shadow: 0 4px 30px rgba(0,212,255,0.3);
+          box-shadow: 0 4px 30px var(--shadow-x);
         }
         .start-btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 8px 40px rgba(0,212,255,0.5);
+          box-shadow: 0 8px 40px var(--shadow-o);
           filter: brightness(1.1);
         }
         .start-btn:active { transform: translateY(0); }
@@ -417,16 +611,16 @@ export default function XOArena() {
           transform: scale(1.03);
         }
         .cell.x-cell {
-          color: #00d4ff;
-          text-shadow: 0 0 20px rgba(0,212,255,0.8), 0 0 40px rgba(0,212,255,0.4);
-          border-color: rgba(0,212,255,0.25);
-          background: rgba(0,212,255,0.06);
+          color: var(--color-x);
+          text-shadow: 0 0 20px var(--color-x), 0 0 40px var(--shadow-x);
+          border-color: var(--color-x-border);
+          background: var(--color-x-bg);
         }
         .cell.o-cell {
-          color: #ff006e;
-          text-shadow: 0 0 20px rgba(255,0,110,0.8), 0 0 40px rgba(255,0,110,0.4);
-          border-color: rgba(255,0,110,0.25);
-          background: rgba(255,0,110,0.06);
+          color: var(--color-o);
+          text-shadow: 0 0 20px var(--color-o), 0 0 40px var(--shadow-o);
+          border-color: var(--color-o-border);
+          background: var(--color-o-bg);
         }
         .cell.winning {
           animation: winPulse 0.8s ease-in-out infinite alternate;
@@ -458,14 +652,14 @@ export default function XOArena() {
           transition: all 0.3s;
         }
         .player-banner.active-x {
-          border-color: rgba(0,212,255,0.5);
-          background: rgba(0,212,255,0.08);
-          box-shadow: 0 0 20px rgba(0,212,255,0.2);
+          border-color: var(--color-x);
+          background: var(--color-x-bg);
+          box-shadow: 0 0 20px var(--shadow-x);
         }
         .player-banner.active-o {
-          border-color: rgba(255,0,110,0.5);
-          background: rgba(255,0,110,0.08);
-          box-shadow: 0 0 20px rgba(255,0,110,0.2);
+          border-color: var(--color-o);
+          background: var(--color-o-bg);
+          box-shadow: 0 0 20px var(--shadow-o);
         }
 
         .turn-dot {
@@ -563,7 +757,7 @@ export default function XOArena() {
         .ai-dot {
           width: 6px; height: 6px;
           border-radius: 50%;
-          background: #ff006e;
+          background: var(--color-o);
           animation: aiPulse 0.6s ease-in-out infinite;
         }
         .ai-dot:nth-child(2) { animation-delay: 0.15s; }
@@ -586,9 +780,9 @@ export default function XOArena() {
           width: 100%;
         }
         .btn-primary {
-          background: linear-gradient(135deg, #00d4ff, #bf00ff);
+          background: var(--gradient-title);
           color: #fff;
-          box-shadow: 0 4px 20px rgba(0,212,255,0.3);
+          box-shadow: 0 4px 20px var(--shadow-x);
         }
         .btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
         .btn-secondary {
@@ -613,6 +807,46 @@ export default function XOArena() {
         }
 
         .section-gap { display: flex; flex-direction: column; gap: 10px; }
+
+        /* ── THEME DROPDOWN ── */
+        .theme-select {
+          background: rgba(255,255,255,0.06);
+          border: 1.5px solid rgba(255,255,255,0.1);
+          border-radius: 12px;
+          padding: 12px 16px;
+          color: #fff;
+          font-family: 'Inter', sans-serif;
+          font-size: 0.9rem;
+          width: 100%;
+          outline: none;
+          cursor: pointer;
+          transition: border-color 0.2s;
+        }
+        .theme-select:focus { border-color: rgba(255,255,255,0.35); }
+        .theme-select option {
+          background: #060614;
+          color: #fff;
+        }
+
+        /* Sound toggle button in header */
+        .sound-toggle-btn {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1.5px solid rgba(255, 255, 255, 0.1);
+          border-radius: 50%;
+          width: 38px;
+          height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: rgba(255, 255, 255, 0.7);
+          transition: all 0.2s;
+        }
+        .sound-toggle-btn:hover {
+          background: rgba(255, 255, 255, 0.1);
+          color: #fff;
+          transform: scale(1.05);
+        }
       `}</style>
 
       {/* Stars */}
@@ -634,7 +868,7 @@ export default function XOArena() {
           {Array.from({length: 50}).map((_,i) => (
             <div key={i} className="confetti-piece" style={{
               left: `${Math.random()*100}%`,
-              background: ['#00d4ff','#ff006e','#ffd700','#bf00ff','#00ff88'][i%5],
+              background: [activeTheme.colorX, activeTheme.colorO, '#ffd700','#bf00ff','#00ff88'][i%5],
               '--dur': `${1.5 + Math.random()*2}s`,
               '--delay': `${Math.random()*0.8}s`,
               '--drift': `${(Math.random()-0.5)*200}px`,
@@ -651,9 +885,18 @@ export default function XOArena() {
         {/* ══════════ MENU SCREEN ══════════ */}
         {screen === "menu" && (
           <div className="glass" style={{width:'min(92vw,420px)', padding:'32px 28px', display:'flex', flexDirection:'column', gap:'24px'}}>
-            <div>
-              <div className="title">XO ARENA</div>
-              <div className="subtitle">Ultimate Tic-Tac-Toe</div>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+              <div style={{flex: 1, textAlign: 'center', paddingLeft: '38px'}}>
+                <div className="title">XO ARENA</div>
+                <div className="subtitle">Ultimate Tic-Tac-Toe</div>
+              </div>
+              <button 
+                className="sound-toggle-btn"
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                title={soundEnabled ? "Mute Sounds" : "Unmute Sounds"}
+              >
+                {soundEnabled ? "🔊" : "🔇"}
+              </button>
             </div>
 
             {/* Mode */}
@@ -691,11 +934,25 @@ export default function XOArena() {
               </div>
             )}
 
+            {/* Themes */}
+            <div className="section-gap">
+              <div className="label">Theme Settings</div>
+              <select 
+                className="theme-select"
+                value={theme}
+                onChange={e => setTheme(e.target.value)}
+              >
+                {Object.entries(THEMES).map(([k, v]) => (
+                  <option key={k} value={k}>{v.name}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Names */}
             <div className="section-gap">
               <div className="label">Player Names</div>
               <div style={{position:'relative'}}>
-                <span style={{position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:'#00d4ff', fontWeight:700, fontSize:'0.85rem', fontFamily:'Orbitron, monospace'}}>X</span>
+                <span style={{position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:activeTheme.colorX, fontWeight:700, fontSize:'0.85rem', fontFamily:'Orbitron, monospace'}}>X</span>
                 <input
                   className="name-input"
                   style={{paddingLeft:'36px'}}
@@ -707,7 +964,7 @@ export default function XOArena() {
               </div>
               {mode === 'pvp' && (
                 <div style={{position:'relative'}}>
-                  <span style={{position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:'#ff006e', fontWeight:700, fontSize:'0.85rem', fontFamily:'Orbitron, monospace'}}>O</span>
+                  <span style={{position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:activeTheme.colorO, fontWeight:700, fontSize:'0.85rem', fontFamily:'Orbitron, monospace'}}>O</span>
                   <input
                     className="name-input"
                     style={{paddingLeft:'36px'}}
@@ -741,25 +998,34 @@ export default function XOArena() {
                 <div style={{fontFamily:'Orbitron, monospace', color:'rgba(255,255,255,0.5)', fontSize:'0.7rem', letterSpacing:'0.15em'}}>ROUND</div>
                 <div style={{fontFamily:'Orbitron, monospace', color:'#fff', fontSize:'1.3rem', fontWeight:700}}>{round}</div>
               </div>
-              <button
-                className="action-btn btn-secondary"
-                style={{width:'auto', padding:'8px 16px', fontSize:'0.8rem'}}
-                onClick={playAgain}
-              >Reset ↺</button>
+              <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                <button 
+                  className="sound-toggle-btn"
+                  style={{width: '32px', height: '32px', fontSize: '0.78rem'}}
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                >
+                  {soundEnabled ? "🔊" : "🔇"}
+                </button>
+                <button
+                  className="action-btn btn-secondary"
+                  style={{width:'auto', padding:'8px 16px', fontSize:'0.8rem'}}
+                  onClick={playAgain}
+                >Reset ↺</button>
+              </div>
             </div>
 
             {/* Player banners */}
             <div style={{display:'flex', gap:'10px', width:'100%'}}>
               <div className={`player-banner ${!result && currentTurn==='X' ? 'active-x' : ''}`}>
-                <div style={{fontFamily:'Orbitron, monospace', color:'#00d4ff', fontSize:'0.8rem', fontWeight:700}}>
-                  {!result && currentTurn === 'X' && <span className="turn-dot" style={{background:'#00d4ff'}} />}X
+                <div style={{fontFamily:'Orbitron, monospace', color:activeTheme.colorX, fontSize:'0.8rem', fontWeight:700}}>
+                  {!result && currentTurn === 'X' && <span className="turn-dot" style={{background:activeTheme.colorX}} />}X
                 </div>
                 <div style={{color:'#fff', fontSize:'0.85rem', fontWeight:600, marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{xName}</div>
               </div>
               <div style={{display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(255,255,255,0.2)', fontFamily:'Orbitron, monospace', fontSize:'1rem', fontWeight:700, flexShrink:0}}>VS</div>
               <div className={`player-banner ${!result && currentTurn==='O' ? 'active-o' : ''}`}>
-                <div style={{fontFamily:'Orbitron, monospace', color:'#ff006e', fontSize:'0.8rem', fontWeight:700}}>
-                  {!result && currentTurn === 'O' && <span className="turn-dot" style={{background:'#ff006e'}} />}O
+                <div style={{fontFamily:'Orbitron, monospace', color:activeTheme.colorO, fontSize:'0.8rem', fontWeight:700}}>
+                  {!result && currentTurn === 'O' && <span className="turn-dot" style={{background:activeTheme.colorO}} />}O
                 </div>
                 <div style={{color:'#fff', fontSize:'0.85rem', fontWeight:600, marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{oName}</div>
               </div>
@@ -767,7 +1033,7 @@ export default function XOArena() {
 
             {/* AI thinking */}
             {aiThinking && (
-              <div style={{display:'flex', alignItems:'center', gap:'8px', color:'rgba(255,0,110,0.7)', fontSize:'0.8rem'}}>
+              <div style={{display:'flex', alignItems:'center', gap:'8px', color:activeTheme.colorO, fontSize:'0.8rem', opacity:0.8}}>
                 <div className="ai-thinking">
                   <div className="ai-dot" /><div className="ai-dot" /><div className="ai-dot" />
                 </div>
@@ -800,16 +1066,16 @@ export default function XOArena() {
 
             {/* Scores */}
             <div className="glass" style={{width:'100%', padding:'14px 16px', display:'flex', gap:'8px', alignItems:'stretch'}}>
-              <div className="score-pill" style={{background:'rgba(0,212,255,0.08)', border:'1px solid rgba(0,212,255,0.2)'}}>
-                <div style={{color:'#00d4ff', fontFamily:'Orbitron, monospace', fontSize:'1.4rem', fontWeight:700}}>{scores.X}</div>
+              <div className="score-pill" style={{background:activeTheme.colorXBg, border:`1px solid ${activeTheme.colorXBorder}`}}>
+                <div style={{color:activeTheme.colorX, fontFamily:'Orbitron, monospace', fontSize:'1.4rem', fontWeight:700}}>{scores.X}</div>
                 <div style={{fontSize:'0.68rem', color:'rgba(255,255,255,0.4)', marginTop:'1px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{xName}</div>
               </div>
               <div className="score-pill" style={{background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)'}}>
                 <div style={{color:'rgba(255,255,255,0.5)', fontFamily:'Orbitron, monospace', fontSize:'1.4rem', fontWeight:700}}>{scores.draw}</div>
                 <div style={{fontSize:'0.68rem', color:'rgba(255,255,255,0.3)', marginTop:'1px'}}>Draw</div>
               </div>
-              <div className="score-pill" style={{background:'rgba(255,0,110,0.08)', border:'1px solid rgba(255,0,110,0.2)'}}>
-                <div style={{color:'#ff006e', fontFamily:'Orbitron, monospace', fontSize:'1.4rem', fontWeight:700}}>{scores.O}</div>
+              <div className="score-pill" style={{background:activeTheme.colorOBg, border:`1px solid ${activeTheme.colorOBorder}`}}>
+                <div style={{color:activeTheme.colorO, fontFamily:'Orbitron, monospace', fontSize:'1.4rem', fontWeight:700}}>{scores.O}</div>
                 <div style={{fontSize:'0.68rem', color:'rgba(255,255,255,0.4)', marginTop:'1px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{oName}</div>
               </div>
             </div>
@@ -842,10 +1108,10 @@ export default function XOArena() {
         <div className="overlay">
           <div className="glass result-card">
             <div className="result-emoji">
-              {result.winner === 'draw' ? '🤝' : result.winner === 'X' ? '🏆' : '🏆'}
+              {result.winner === 'draw' ? '🤝' : '🏆'}
             </div>
             <div style={{marginTop:'16px', fontFamily:'Orbitron, monospace', fontSize:'1.5rem', fontWeight:900,
-              background: result.winner==='X' ? 'linear-gradient(135deg,#00d4ff,#fff)' : result.winner==='O' ? 'linear-gradient(135deg,#ff006e,#fff)' : 'linear-gradient(135deg,#ffd700,#fff)',
+              background: result.winner==='X' ? `linear-gradient(135deg, ${activeTheme.colorX}, #fff)` : result.winner==='O' ? `linear-gradient(135deg, ${activeTheme.colorO}, #fff)` : 'linear-gradient(135deg, #ffd700, #fff)',
               WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text'}}>
               {result.winner === 'draw' ? "IT'S A DRAW!" : result.winner === 'X' ? `${xName} WINS!` : `${oName} WINS!`}
             </div>
@@ -857,16 +1123,16 @@ export default function XOArena() {
 
             {/* Updated scores inside modal */}
             <div style={{display:'flex', gap:'10px', marginTop:'20px'}}>
-              <div style={{flex:1, background:'rgba(0,212,255,0.08)', border:'1px solid rgba(0,212,255,0.2)', borderRadius:'12px', padding:'10px', textAlign:'center'}}>
-                <div style={{color:'#00d4ff', fontFamily:'Orbitron, monospace', fontSize:'1.3rem', fontWeight:700}}>{scores.X}</div>
+              <div style={{flex:1, background:activeTheme.colorXBg, border:`1px solid ${activeTheme.colorXBorder}`, borderRadius:'12px', padding:'10px', textAlign:'center'}}>
+                <div style={{color:activeTheme.colorX, fontFamily:'Orbitron, monospace', fontSize:'1.3rem', fontWeight:700}}>{scores.X}</div>
                 <div style={{color:'rgba(255,255,255,0.4)', fontSize:'0.7rem', marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{xName}</div>
               </div>
               <div style={{flex:1, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:'12px', padding:'10px', textAlign:'center'}}>
                 <div style={{color:'rgba(255,255,255,0.5)', fontFamily:'Orbitron, monospace', fontSize:'1.3rem', fontWeight:700}}>{scores.draw}</div>
                 <div style={{color:'rgba(255,255,255,0.3)', fontSize:'0.7rem', marginTop:'2px'}}>Draws</div>
               </div>
-              <div style={{flex:1, background:'rgba(255,0,110,0.08)', border:'1px solid rgba(255,0,110,0.2)', borderRadius:'12px', padding:'10px', textAlign:'center'}}>
-                <div style={{color:'#ff006e', fontFamily:'Orbitron, monospace', fontSize:'1.3rem', fontWeight:700}}>{scores.O}</div>
+              <div style={{flex:1, background:activeTheme.colorOBg, border:`1px solid ${activeTheme.colorOBorder}`, borderRadius:'12px', padding:'10px', textAlign:'center'}}>
+                <div style={{color:activeTheme.colorO, fontFamily:'Orbitron, monospace', fontSize:'1.3rem', fontWeight:700}}>{scores.O}</div>
                 <div style={{color:'rgba(255,255,255,0.4)', fontSize:'0.7rem', marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{oName}</div>
               </div>
             </div>
