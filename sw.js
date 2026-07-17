@@ -3,7 +3,9 @@ const ASSETS = [
   './',
   './index.html',
   './favicon.svg',
-  './manifest.json'
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 // Install Event
@@ -30,21 +32,44 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Fetch Event (Network falling back to cache, with dynamic caching)
+// Fetch Event
 self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    fetch(e.request)
-      .then((networkResponse) => {
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(e.request, responseToCache);
-          });
+  const url = new URL(e.request.url);
+
+  // Cache-First strategy for static assets (hashed JS/CSS, images)
+  if (url.pathname.includes('/assets/') || url.pathname.endsWith('.png') || url.pathname.endsWith('.svg') || url.pathname.endsWith('.json')) {
+    e.respondWith(
+      caches.match(e.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
         }
-        return networkResponse;
+        return fetch(e.request).then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(e.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        });
       })
-      .catch(() => {
-        return caches.match(e.request);
-      })
-  );
+    );
+  } else {
+    // Network-First falling back to Cache for other requests (HTML documents, root, etc.)
+    e.respondWith(
+      fetch(e.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(e.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          return caches.match(e.request);
+        })
+    );
+  }
 });

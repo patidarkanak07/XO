@@ -1,12 +1,42 @@
 {
+  "id": "xo-arena-pwa",
   "short_name": "XO Arena",
   "name": "XO Arena - Ultimate Tic-Tac-Toe",
+  "description": "Play the ultimate neon Tic-Tac-Toe game! Custom synthesizer sounds, four visual themes (Neon, Cyberpunk, Emerald, Sunset), and intelligent AI difficulty levels.",
   "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
     {
       "src": "favicon.svg",
       "type": "image/svg+xml",
       "sizes": "any",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "XO Arena Gameplay on Desktop"
+    },
+    {
+      "src": "screenshot-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "XO Arena Gameplay on Mobile"
     }
   ],
   "start_url": "./",
